@@ -8,5 +8,4 @@ setup(name='MultiOutputRF',
       author='Christopher Erick Moody',
       author_email='chrisemoody@gmail.com',
       url='https://github.com/cemoody/MultiOutputRF',
-      packages=['distutils', 'distutils.command']
       )
