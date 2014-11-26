@@ -3,6 +3,7 @@ import numpy as np
 from MultiOutputRF import MultiOutputRF
 
 
+# class TestMultiOutputRF():
 class TestMultiOutputRF(unittest.TestCase):
     def test_correlated_quadratic(self):
         X1 = np.linspace(0, 1, 100)

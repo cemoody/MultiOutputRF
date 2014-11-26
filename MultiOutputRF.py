@@ -1,8 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 
-passthrough = lambda Y, i: Y
-
 
 class MultiOutputRF(object):
     """ Thin wrapper class around the sklearn RF Regressor. Basically allows
@@ -33,19 +31,30 @@ class MultiOutputRF(object):
         The number of layers to be built. Seperate layers have the previous
         layer of output predictions available as inputs. Default is 1 layer.
 
-        remove_leaky_signals : func(X, i_output) : X'
+        func_index_rows : func(X, i_output) : bool array of [n_samples]
         This accepts a function that has as input and array of shape
         [n_samples, n_outputs] originally passed to fit or predict and also
         is given an integer for which output dimension MultiOutputRF is
-        currently trying to predict. The function should remove any signals
-        that are leaky with respect to dimention i_output and return the
-        sanitized array. Default is just to pass through the whole array.
+        currently trying to predict. The function should remove any rows
+        that are not relevant for predicting i_output. This can happen when
+        there is missing data and we'd like to skip examples for one
+        output but not another output.
+
+        func_index_cols : func(X, i_output) : bool array of [n_outputs]
+        This accepts a function that has as inputs two arrays of shape
+        [n_samples, n_outputs] originally passed to fit or predict and also
+        is given an integer for which output dimension MultiOutputRF is
+        currently trying to predict. This is useful when that are leaky
+        signals with respect to dimension i_output.
+        Default is just to pass through the whole array.
 
         """
         self.args = args
         self.layers = kwargs.pop('layers', 1)
-        self.remove_leaky_signals = kwargs.pop('remove_leaky_signals',
-                                               passthrough)
+        passthrough_rows = lambda X, i: np.ones(X.shape[0], dtype='bool')
+        passthrough_cols = lambda X, i: np.ones(X.shape[1], dtype='bool')
+        self.func_index_rows = kwargs.pop('func_index_rows', passthrough_rows)
+        self.func_index_cols = kwargs.pop('func_index_cols', passthrough_cols)
         self.kwargs = kwargs
         self.models = {i: {} for i in range(self.layers)}
 
@@ -64,17 +73,27 @@ class MultiOutputRF(object):
         X, Y = map(np.atleast_2d, (X, Y))
         assert X.shape[0] == Y.shape[0]
         Ny = Y.shape[1]
-        cX = X
         for layer in range(self.layers):
             signals_added = []
             if len(signals_added) > 0:
-                cX = np.hstack([cX, signals_added])
+                X = np.hstack([X, signals_added])
             for i in range(Ny):
-                iX = self.remove_leaky_signals(cX.copy(), i)
+                idx_rows = self.func_index_rows(X, i)
+                idx_cols = self.func_index_cols(X, i)
+                # Truncate input array rows (remove bad examples for
+                # target i) and cols (remove leaky signals for
+                # target i)
+                tX = X[idx_rows][:, idx_cols]
+                # Target array for subselected rows, but just for the
+                # target dimension
+                tY = Y[idx_rows, i]
                 model = RandomForestRegressor(*self.args, **self.kwargs)
-                predicted_Y = model.fit_transform(iX, Y[:, i])
+                model.fit(tX, tY)
+                # Predict values for all examples
+                fX = X[:, idx_cols]
+                fY = model.predict(fX)
                 self.models[layer][i] = model
-                signals_added.append(predicted_Y)
+                signals_added.append(fY)
         return np.vstack([signals_added]).T
 
     def predict(self, X):
@@ -86,15 +105,16 @@ class MultiOutputRF(object):
         X : array of [n_samples, n_dimensions]
         The sample data to predict targets on.
         """
-        cX = X
         for layer in range(self.layers):
             signals_added = []
             if len(signals_added) > 0:
-                cX = np.hstack([cX, signals_added])
+                X = np.hstack([X, signals_added])
             Ny = len(self.models[layer].values())
             for i in range(Ny):
                 model = self.models[layer][i]
-                predicted_Y = model.predict(cX)
-                self.models[layer][i] = model
-                signals_added.append(predicted_Y)
+                idx_cols = self.func_index_cols(X, i)
+                # Predict values for all examples
+                fX = X[:, idx_cols]
+                fY = model.predict(fX)
+                signals_added.append(fY)
         return np.vstack([signals_added]).T
