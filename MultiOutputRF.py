@@ -55,8 +55,10 @@ class MultiOutputRF(object):
         self.layers = kwargs.pop('layers', 1)
         passthrough_rows = lambda X, Y, i: np.ones(X.shape[0], dtype='bool')
         passthrough_cols = lambda X, Y, i: np.ones(X.shape[1], dtype='bool')
+        passthrough = lambda *args: None
         self.func_index_rows = kwargs.pop('func_index_rows', passthrough_rows)
         self.func_index_cols = kwargs.pop('func_index_cols', passthrough_cols)
+        self.func_callback = kwargs.pop('func_callback', passthrough)
         self.kwargs = kwargs
         self.models = {i: {} for i in range(self.layers)}
         self.logger = logging.getLogger(__name__)
@@ -95,16 +97,19 @@ class MultiOutputRF(object):
                 assert tX.size > 0
                 assert tY.size > 0
                 model.fit(tX, tY)
+                fYs = model.predict(tX)
                 # Predict values for all examples
                 fX = X[:, idx_cols]
                 fY = model.predict(fX)
                 self.models[layer][i] = model
                 signals_added.append(fY)
                 t1 = time.time()
-                msg = 'Layer %02i, col %02i, rows %1.1e, columns %1.1i, '
-                msg += 'time %1.1isec training'
-                msg = msg % (layer, i, tX.shape[0], tX.shape[1], t1 - t0)
+                msg = 'Layer %02i, target %02i, rows %1.1e, columns %1.1i, '
+                msg += 'score %1.1f, training time %1.1isec'
+                msg = msg % (layer, i, tX.shape[0], tX.shape[1],
+                             model.oob_score_, t1 - t0)
                 self.logger.info(msg)
+                self.func_callback(tX, tY, fYs)
         return np.vstack([signals_added]).T
 
     def predict(self, X):
@@ -131,7 +136,7 @@ class MultiOutputRF(object):
                 fY = model.predict(fX)
                 signals_added.append(fY)
                 t1 = time.time()
-                msg = 'Layer %02i, col %02i, time %1.1isec, predicting'
+                msg = 'Layer %02i, col %02i, prediction time %1.1isec'
                 msg = msg % (layer, i, t1 - t0)
                 self.logger.info(msg)
         return np.vstack([signals_added]).T
