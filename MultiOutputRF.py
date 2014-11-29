@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 from sklearn.ensemble import RandomForestRegressor
 
 
@@ -57,6 +58,7 @@ class MultiOutputRF(object):
         self.func_index_cols = kwargs.pop('func_index_cols', passthrough_cols)
         self.kwargs = kwargs
         self.models = {i: {} for i in range(self.layers)}
+        self.logger = logging.getLogger(__name__)
 
     def fit(self, X, Y):
         """
@@ -83,10 +85,13 @@ class MultiOutputRF(object):
                 # Truncate input array rows (remove bad examples for
                 # target i) and cols (remove leaky signals for
                 # target i)
-                tX = X[idx_rows][:, idx_cols]
+                tX = X[idx_rows, :][:, idx_cols]
                 # Target array for subselected rows, but just for the
                 # target dimension
                 tY = Y[idx_rows, i]
+                msg = 'Layer %02i, target %02i, rows %1.1e, columns %1.1i '
+                msg = msg % (layer, i, idx_rows.sum(), idx_cols.sum())
+                self.logger.info(msg)
                 model = RandomForestRegressor(*self.args, **self.kwargs)
                 assert tX.size > 0
                 assert tY.size > 0
@@ -114,7 +119,7 @@ class MultiOutputRF(object):
             Ny = len(self.models[layer].values())
             for i in range(Ny):
                 model = self.models[layer][i]
-                idx_cols = self.func_index_cols(X, i)
+                idx_cols = self.func_index_cols(X, X, i)
                 # Predict values for all examples
                 fX = X[:, idx_cols]
                 fY = model.predict(fX)
