@@ -83,6 +83,7 @@ class MultiOutputRF(object):
         """
         assert X.shape[0] == Y.shape[0]
         targets = Y.columns
+        self.targets = targets
         for layer in range(self.layers):
             signals_added = []
             if len(signals_added) > 0:
@@ -98,7 +99,7 @@ class MultiOutputRF(object):
                 # Training input
                 tX = X.ix[idx_rows][idx_cols]
                 # Scoring input
-                sX = X.ix[idx_rows]
+                sX = X[idx_cols]
                 # Target input for subselected rows, but just for the
                 # target dimension
                 tY = Y.ix[idx_rows][target]
@@ -141,22 +142,22 @@ class MultiOutputRF(object):
         X : array of [n_samples, n_dimensions]
         The sample data to predict targets on.
         """
-        X = np.atleast_2d(X)
+        targets = self.targets
         for layer in range(self.layers):
             signals_added = []
             if len(signals_added) > 0:
-                X = np.hstack([X, signals_added])
-            Ny = len(self.models[layer].values())
-            for i in range(Ny):
+                for k, v in signals_added.iteritems():
+                    X[k] = v
+            for target in targets:
                 t0 = time.time()
-                model = self.models[layer][i]
-                idx_cols = self.func_index_cols(X, X, i)
+                idx_cols = self.func_index_cols(X, X, target)
+                sX = X[idx_cols]
+                model = self.models[layer][target]
+                sY = model.predict(sX)
                 # Predict values for all examples
-                fX = X[:, idx_cols]
-                fY = model.predict(fX)
-                signals_added.append(fY)
+                signals_added['predicted_L%02i_%s' % (layer, target)] = sY
                 t1 = time.time()
                 msg = 'Layer %02i, col %02i, prediction time %1.1isec'
-                msg = msg % (layer, i, t1 - t0)
+                msg = msg % (layer, target, t1 - t0)
                 self.logger.info(msg)
         return np.vstack([signals_added]).T
