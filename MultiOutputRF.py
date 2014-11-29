@@ -53,6 +53,8 @@ class MultiOutputRF(object):
 
         """
         self.layers = kwargs.pop('layers', 1)
+        self.func_index_rows = func_index_rows
+        self.func_index_cols = func_index_cols
         if func_index_rows is None:
             self.func_index_rows = lambda X, Y, i: np.ones(X.shape[0],
                                                            dtype='bool')
