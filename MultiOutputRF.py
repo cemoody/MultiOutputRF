@@ -119,7 +119,7 @@ class MultiOutputRF(object):
                     v = model.feature_importances_[j]
                     n = self.column_names[j]
                     if n is not None and j < 4:
-                        msg = '#%1i Feature: %1.2f %s'
+                        msg = '#%1i Feature: %1.2e %s'
                         msg = msg % (j, v, n)
                         self.logger.info(msg)
                 self.func_callback(tX, tY)
