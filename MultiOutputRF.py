@@ -85,7 +85,7 @@ class MultiOutputRF(object):
         targets = Y.columns
         self.targets = targets
         for layer in range(self.layers):
-            signals_added = []
+            signals_added = {}
             if len(signals_added) > 0:
                 for k, v in signals_added.iteritems():
                     X[k] = v
@@ -144,7 +144,7 @@ class MultiOutputRF(object):
         """
         targets = self.targets
         for layer in range(self.layers):
-            signals_added = []
+            signals_added = {}
             if len(signals_added) > 0:
                 for k, v in signals_added.iteritems():
                     X[k] = v
@@ -157,7 +157,7 @@ class MultiOutputRF(object):
                 # Predict values for all examples
                 signals_added['predicted_L%02i_%s' % (layer, target)] = sY
                 t1 = time.time()
-                msg = 'Layer %02i, col %02i, prediction time %1.1isec'
+                msg = 'Layer %02i, col %s, prediction time %1.1isec'
                 msg = msg % (layer, target, t1 - t0)
                 self.logger.info(msg)
         return np.vstack([signals_added]).T
