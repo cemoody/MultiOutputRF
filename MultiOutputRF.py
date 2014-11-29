@@ -97,7 +97,7 @@ class MultiOutputRF(object):
                 assert tX.size > 0
                 assert tY.size > 0
                 model.fit(tX, tY)
-                fYs = model.predict(tX)
+                score = model.score(tX, tY)
                 # Predict values for all examples
                 fX = X[:, idx_cols]
                 fY = model.predict(fX)
@@ -107,9 +107,9 @@ class MultiOutputRF(object):
                 msg = 'Layer %02i, target %02i, rows %1.1e, columns %1.1i, '
                 msg += 'score %1.1f, training time %1.1isec'
                 msg = msg % (layer, i, tX.shape[0], tX.shape[1],
-                             model.oob_score_, t1 - t0)
+                             score, t1 - t0)
                 self.logger.info(msg)
-                self.func_callback(tX, tY, fYs)
+                self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
 
     def predict(self, X):
