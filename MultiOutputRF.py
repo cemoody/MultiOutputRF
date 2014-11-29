@@ -127,7 +127,7 @@ class MultiOutputRF(object):
         features_ranked = np.argsort(model.feature_importances_)[::-1]
         for j, ci in enumerate(features_ranked):
             v = model.feature_importances_[ci]
-            n = tX.columns[j]
+            n = tX.columns[ci]
             if n is not None and j < 40:
                 msg = '#%02i Feature for %s: %1.2e %s'
                 msg = msg % (j, target, v, n)
