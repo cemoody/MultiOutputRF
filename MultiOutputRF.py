@@ -116,11 +116,11 @@ class MultiOutputRF(object):
                 self.logger.info(msg)
                 for j, ci in enumerate(np.argsort(model.feature_importances_)):
                     v = model.feature_importances_[j]
-                    msg = '#%1i Feature: %1.2f %s'
-                    msg = msg % (j, v, self.column_names[j])
-                    self.logger.info(msg)
-                    if j > 5:
-                        break
+                    n = self.column_names[j]
+                    if n is not None and j < 4:
+                        msg = '#%1i Feature: %1.2f %s'
+                        msg = msg % (j, v, n)
+                        self.logger.info(msg)
                 self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
 
