@@ -1,5 +1,6 @@
-import numpy as np
+import time
 import logging
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 
 
@@ -80,6 +81,7 @@ class MultiOutputRF(object):
             if len(signals_added) > 0:
                 X = np.hstack([X, signals_added])
             for i in range(Ny):
+                t0 = time.time()
                 idx_rows = self.func_index_rows(X, Y, i)
                 idx_cols = self.func_index_cols(X, Y, i)
                 # Truncate input array rows (remove bad examples for
@@ -89,9 +91,6 @@ class MultiOutputRF(object):
                 # Target array for subselected rows, but just for the
                 # target dimension
                 tY = Y[idx_rows, i]
-                msg = 'Layer %02i, target %02i, rows %1.1e, columns %1.1i '
-                msg = msg % (layer, i, idx_rows.sum(), idx_cols.sum())
-                self.logger.info(msg)
                 model = RandomForestRegressor(*self.args, **self.kwargs)
                 assert tX.size > 0
                 assert tY.size > 0
@@ -101,6 +100,11 @@ class MultiOutputRF(object):
                 fY = model.predict(fX)
                 self.models[layer][i] = model
                 signals_added.append(fY)
+                t1 = time.time()
+                msg = 'Layer %02i, col %02i, rows %1.1e, columns %1.1i, '
+                msg += 'time %1.1isec training'
+                msg = msg % (layer, i, tX.shape[0], tX.shape[1], t1 - t0)
+                self.logger.info(msg)
         return np.vstack([signals_added]).T
 
     def predict(self, X):
@@ -119,10 +123,15 @@ class MultiOutputRF(object):
                 X = np.hstack([X, signals_added])
             Ny = len(self.models[layer].values())
             for i in range(Ny):
+                t0 = time.time()
                 model = self.models[layer][i]
                 idx_cols = self.func_index_cols(X, X, i)
                 # Predict values for all examples
                 fX = X[:, idx_cols]
                 fY = model.predict(fX)
                 signals_added.append(fY)
+                t1 = time.time()
+                msg = 'Layer %02i, col %02i, time %1.1isec, predicting'
+                msg = msg % (layer, i, t1 - t0)
+                self.logger.info(msg)
         return np.vstack([signals_added]).T
