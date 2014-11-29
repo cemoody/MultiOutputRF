@@ -23,7 +23,8 @@ class MultiOutputRF(object):
         outputs from one layer to the next.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, func_index_rows=None, func_index_cols=None,
+                 func_callback=None, column_names=None, **kwargs):
         """
         Initialize the MultiOutputRF Model.
 
@@ -51,17 +52,19 @@ class MultiOutputRF(object):
         Default is just to pass through the whole array.
 
         """
-        self.args = args
         self.layers = kwargs.pop('layers', 1)
-        passthrough_rows = lambda X, Y, i: np.ones(X.shape[0], dtype='bool')
-        passthrough_cols = lambda X, Y, i: np.ones(X.shape[1], dtype='bool')
-        passthrough = lambda *args: None
-        self.func_index_rows = kwargs.pop('func_index_rows', passthrough_rows)
-        self.func_index_cols = kwargs.pop('func_index_cols', passthrough_cols)
-        self.func_callback = kwargs.pop('func_callback', passthrough)
+        if func_index_rows is None:
+            self.func_index_rows = lambda X, Y, i: np.ones(X.shape[0],
+                                                           dtype='bool')
+        if func_index_cols is None:
+            self.func_index_cols = lambda X, Y, i: np.ones(X.shape[1],
+                                                           dtype='bool')
+        if func_callback is None:
+            self.func_callback = lambda *args: None
         self.kwargs = kwargs
         self.models = {i: {} for i in range(self.layers)}
         self.logger = logging.getLogger(__name__)
+        self.column_names = column_names
 
     def fit(self, X, Y):
         """
@@ -109,6 +112,13 @@ class MultiOutputRF(object):
                 msg = msg % (layer, i, tX.shape[0], tX.shape[1],
                              score, t1 - t0)
                 self.logger.info(msg)
+                for j, ci in enumerate(np.argsort(model.feature_importances_)):
+                    v = model.feature_importances_[j]
+                    msg = '#%1i Feature: %1.2f %s'
+                    msg = msg % (j, v, self.column_names[j])
+                    self.logger.info(msg)
+                    if j > 5:
+                        break
                 self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
 
