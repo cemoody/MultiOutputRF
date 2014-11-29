@@ -51,8 +51,8 @@ class MultiOutputRF(object):
         """
         self.args = args
         self.layers = kwargs.pop('layers', 1)
-        passthrough_rows = lambda X, i: np.ones(X.shape[0], dtype='bool')
-        passthrough_cols = lambda X, i: np.ones(X.shape[1], dtype='bool')
+        passthrough_rows = lambda X, Y, i: np.ones(X.shape[0], dtype='bool')
+        passthrough_cols = lambda X, Y, i: np.ones(X.shape[1], dtype='bool')
         self.func_index_rows = kwargs.pop('func_index_rows', passthrough_rows)
         self.func_index_cols = kwargs.pop('func_index_cols', passthrough_cols)
         self.kwargs = kwargs
@@ -78,8 +78,8 @@ class MultiOutputRF(object):
             if len(signals_added) > 0:
                 X = np.hstack([X, signals_added])
             for i in range(Ny):
-                idx_rows = self.func_index_rows(X, i)
-                idx_cols = self.func_index_cols(X, i)
+                idx_rows = self.func_index_rows(X, Y, i)
+                idx_cols = self.func_index_cols(X, Y, i)
                 # Truncate input array rows (remove bad examples for
                 # target i) and cols (remove leaky signals for
                 # target i)
@@ -88,6 +88,8 @@ class MultiOutputRF(object):
                 # target dimension
                 tY = Y[idx_rows, i]
                 model = RandomForestRegressor(*self.args, **self.kwargs)
+                assert tX.size > 0
+                assert tY.size > 0
                 model.fit(tX, tY)
                 # Predict values for all examples
                 fX = X[:, idx_cols]
