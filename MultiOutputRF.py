@@ -111,7 +111,7 @@ class MultiOutputRF(object):
                 # Predict values for all examples
                 sY = model.predict(sX)
                 self.models[layer][target] = model
-                self._log(layer, target, t0, tX, tY, tYp, model, idx_cols)
+                self._log(layer, target, t0, tX, tY, tYp, model)
                 signals_added['predicted_L%02i_%s' % (layer, target)] = sY
                 self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
@@ -119,9 +119,9 @@ class MultiOutputRF(object):
     def _log(self, layer, target, t0, tX, tY, tYp, model):
         t1 = time.time()
         score = self.metric(tY, tYp)
-        msg = 'Layer %02i, target %02i/%s, rows %1.1e, columns %1.1i, '
+        msg = 'Layer %02i, target %s, rows %1.1e, columns %1.1i, '
         msg += 'score %1.1e, training time %1.1isec'
-        msg = msg % (layer, target, target, tX.shape[0], tX.shape[1],
+        msg = msg % (layer, target, tX.shape[0], tX.shape[1],
                      score, t1 - t0)
         self.logger.info(msg)
         features_ranked = np.argsort(model.feature_importances_)[::-1]
