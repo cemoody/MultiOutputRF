@@ -98,7 +98,7 @@ class MultiOutputRF(object):
                 # Target array for subselected rows, but just for the
                 # target dimension
                 tY = Y[idx_rows, i]
-                model = RandomForestRegressor(*self.args, **self.kwargs)
+                model = RandomForestRegressor(**self.kwargs)
                 assert tX.size > 0
                 assert tY.size > 0
                 model.fit(tX, tY)
