@@ -112,6 +112,7 @@ class MultiOutputRF(object):
         X : array of [n_samples, n_dimensions]
         The sample data to predict targets on.
         """
+        X = np.atleast_2d(X)
         for layer in range(self.layers):
             signals_added = []
             if len(signals_added) > 0:
