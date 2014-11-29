@@ -114,7 +114,8 @@ class MultiOutputRF(object):
                 msg = msg % (layer, i, tX.shape[0], tX.shape[1],
                              score, t1 - t0)
                 self.logger.info(msg)
-                for j, ci in enumerate(np.argsort(model.feature_importances_)):
+                features_ranked = np.argsort(model.feature_importances_)[::-1]
+                for j, ci in enumerate(features_ranked):
                     v = model.feature_importances_[j]
                     n = self.column_names[j]
                     if n is not None and j < 4:
