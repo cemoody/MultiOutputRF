@@ -24,7 +24,8 @@ class MultiOutputRF(object):
     """
 
     def __init__(self, func_index_rows=None, func_index_cols=None,
-                 func_callback=None, column_names=None, **kwargs):
+                 func_callback=None, target_names=None, column_names=None, 
+                 **kwargs):
         """
         Initialize the MultiOutputRF Model.
 
@@ -67,6 +68,7 @@ class MultiOutputRF(object):
         self.models = {i: {} for i in range(self.layers)}
         self.logger = logging.getLogger(__name__)
         self.column_names = column_names
+        self.target_names = target_names
 
     def fit(self, X, Y):
         """
@@ -102,28 +104,33 @@ class MultiOutputRF(object):
                 assert tX.size > 0
                 assert tY.size > 0
                 model.fit(tX, tY)
-                score = model.score(tX, tY)
                 # Predict values for all examples
                 fX = X[:, idx_cols]
                 fY = model.predict(fX)
                 self.models[layer][i] = model
+                self._log(layer, i, t0, tX, model)
                 signals_added.append(fY)
-                t1 = time.time()
-                msg = 'Layer %02i, target %02i, rows %1.1e, columns %1.1i, '
-                msg += 'score %1.1f, training time %1.1isec'
-                msg = msg % (layer, i, tX.shape[0], tX.shape[1],
-                             score, t1 - t0)
-                self.logger.info(msg)
-                features_ranked = np.argsort(model.feature_importances_)[::-1]
-                for j, ci in enumerate(features_ranked):
-                    v = model.feature_importances_[j]
-                    n = self.column_names[j]
-                    if n is not None and j < 4:
-                        msg = '#%1i Feature: %1.2e %s'
-                        msg = msg % (j, v, n)
-                        self.logger.info(msg)
                 self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
+
+    def _log(self, layer, i, t0, tX, model):
+        t1 = time.time()
+        name = ""
+        if self.target_names is not None:
+            name = self.target_names[i]
+        msg = 'Layer %02i, target %02i/%s, rows %1.1e, columns %1.1i, '
+        msg += 'training time %1.1isec'
+        msg = msg % (layer, i, name, tX.shape[0], tX.shape[1],
+                     t1 - t0)
+        self.logger.info(msg)
+        features_ranked = np.argsort(model.feature_importances_)[::-1]
+        for j, ci in enumerate(features_ranked):
+            v = model.feature_importances_[ci]
+            n = self.column_names[j]
+            if n is not None and j < 40:
+                msg = '#%1i Feature %s: %1.2e %s'
+                msg = msg % (j, "for " + name, v, n)
+                self.logger.info(msg)
 
     def predict(self, X):
         """
