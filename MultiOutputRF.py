@@ -25,8 +25,7 @@ class MultiOutputRF(object):
     """
 
     def __init__(self, func_index_rows=None, func_index_cols=None,
-                 func_callback=None, target_names=None, column_names=None, 
-                 metric=mean_squared_error, **kwargs):
+                 func_callback=None, metric=mean_squared_error, **kwargs):
         """
         Initialize the MultiOutputRF Model.
 
@@ -68,8 +67,6 @@ class MultiOutputRF(object):
         self.kwargs = kwargs
         self.models = {i: {} for i in range(self.layers)}
         self.logger = logging.getLogger(__name__)
-        self.column_names = column_names
-        self.target_names = target_names
         self.metric = metric
 
     def fit(self, X, Y):
@@ -84,59 +81,55 @@ class MultiOutputRF(object):
         Y : array of [n_samples, n_outputs]
         The target values, real numbers in regression.
         """
-        X, Y = map(np.atleast_2d, (X, Y))
         assert X.shape[0] == Y.shape[0]
-        Ny = Y.shape[1]
+        targets = Y.columns
         for layer in range(self.layers):
             signals_added = []
             if len(signals_added) > 0:
-                X = np.hstack([X, signals_added])
-            for i in range(Ny):
+                for k, v in signals_added.iteritems():
+                    X[k] = v
+            for target in targets:
                 t0 = time.time()
-                idx_rows = self.func_index_rows(X, Y, i)
-                idx_cols = self.func_index_cols(X, Y, i)
+                idx_rows = self.func_index_rows(X, Y, target)
+                idx_cols = self.func_index_cols(X, Y, target)
                 # Truncate input array rows (remove bad examples for
-                # target i) and cols (remove leaky signals for
-                # target i)
-                tX = X[idx_rows, :][:, idx_cols].copy()
-                # Target array for subselected rows, but just for the
+                # target) and cols (remove leaky signals for
+                # target)
+                # Training input
+                tX = X.ix[idx_rows][idx_cols]
+                # Scoring input
+                sX = X.ix[idx_rows]
+                # Target input for subselected rows, but just for the
                 # target dimension
-                tY = Y[idx_rows, i].copy()
+                tY = Y.ix[idx_rows][target]
                 model = RandomForestRegressor(**self.kwargs)
-                assert tX.size > 0
-                assert tY.size > 0
+                assert np.prod(tX.shape) > 0
+                assert np.prod(tY.shape) > 0
                 model.fit(tX, tY)
                 tYp = model.predict(tX)
                 # Predict values for all examples
-                fX = X[:, idx_cols]
-                fY = model.predict(fX)
-                self.models[layer][i] = model
-                self._log(layer, i, t0, tX, tY, tYp, model)
-                signals_added.append(fY)
+                sY = model.predict(sX)
+                self.models[layer][target] = model
+                self._log(layer, target, t0, tX, tY, tYp, model, idx_cols)
+                signals_added['predicted_L%02i_%s' % (layer, target)] = sY
                 self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
 
-    def _log(self, layer, i, t0, tX, tY, tYp, model):
+    def _log(self, layer, target, t0, tX, tY, tYp, model):
         t1 = time.time()
-        name = ""
-        if self.target_names is not None:
-            name = self.target_names[i]
         score = self.metric(tY, tYp)
         msg = 'Layer %02i, target %02i/%s, rows %1.1e, columns %1.1i, '
         msg += 'score %1.1e, training time %1.1isec'
-        msg = msg % (layer, i, name, tX.shape[0], tX.shape[1],
+        msg = msg % (layer, target, target, tX.shape[0], tX.shape[1],
                      score, t1 - t0)
         self.logger.info(msg)
         features_ranked = np.argsort(model.feature_importances_)[::-1]
         for j, ci in enumerate(features_ranked):
             v = model.feature_importances_[ci]
-            n = self.column_names[j]
+            n = tX.columns[j]
             if n is not None and j < 40:
-                msg = '#%02i Feature%s: %1.2e %s'
-                if len(name) == 0:
-                    msg = msg % (j, "", v, n)
-                else: 
-                    msg = msg % (j, " for " + name, v, n)
+                msg = '#%02i Feature for %s: %1.2e %s'
+                msg = msg % (j, target, v, n)
                 self.logger.info(msg)
 
     def predict(self, X):
