@@ -1,6 +1,7 @@
 import time
 import logging
 import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
@@ -92,27 +93,33 @@ class MultiOutputRF(object):
             for target in targets:
                 t0 = time.time()
                 idx_rows = self.func_index_rows(X, Y, target)
+                assert np.all(idx_rows.index == X.index)
                 idx_cols = self.func_index_cols(X, Y, target)
+                assert np.all([c in X.columns for c in idx_cols])
                 # Truncate input array rows (remove bad examples for
                 # target) and cols (remove leaky signals for
                 # target)
                 # Training input
-                tX = X.ix[idx_rows][idx_cols]
+                tX = X[idx_rows][idx_cols]
                 # Scoring input
                 sX = X[idx_cols]
                 # Target input for subselected rows, but just for the
                 # target dimension
-                tY = Y.ix[idx_rows][target]
+                tY = Y[idx_rows][target]
                 model = RandomForestRegressor(**self.kwargs)
                 assert np.prod(tX.shape) > 0
                 assert np.prod(tY.shape) > 0
+                # Ensure that observations are aligned
+                assert np.all(tY.index == tX.index)
                 model.fit(tX, tY)
                 tYp = model.predict(tX)
                 # Predict values for all examples
-                sY = model.predict(sX)
+                key = '%s_%02i' % (target, layer)
+                sYp = model.predict(sX)
+                sYp = pd.DataFrame(sYp, index=sX.index, columns=[key])
+                signals_added[key] = sYp
                 self.models[layer][target] = model
                 self._log(layer, target, t0, tX, tY, tYp, model)
-                signals_added['predicted_L%02i_%s' % (layer, target)] = sY
                 self.func_callback(tX, tY)
         return np.vstack([signals_added]).T
 
@@ -153,11 +160,20 @@ class MultiOutputRF(object):
                 idx_cols = self.func_index_cols(X, X, target)
                 sX = X[idx_cols]
                 model = self.models[layer][target]
-                sY = model.predict(sX)
+                if layer == self.layers - 1:
+                    key = target
+                else:
+                    key = '%s_%02i' % (target, layer)
+                sYp = model.predict(sX)
+                sYp = pd.DataFrame(sYp, index=sX.index, columns=[key])
+                signals_added[key] = sYp
                 # Predict values for all examples
-                signals_added['predicted_L%02i_%s' % (layer, target)] = sY
                 t1 = time.time()
                 msg = 'Layer %02i, col %s, prediction time %1.1isec'
                 msg = msg % (layer, target, t1 - t0)
                 self.logger.info(msg)
-        return np.vstack([signals_added]).T
+        ret = signals_added.pop(key)
+        for key, df in signals_added.iteritems():
+            ret[key] = df
+        assert np.all(ret.index == X.index)
+        return ret
