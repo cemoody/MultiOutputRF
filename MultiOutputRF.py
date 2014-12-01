@@ -54,17 +54,25 @@ class MultiOutputRF(object):
         Default is just to pass through the whole array.
 
         """
-        self.layers = kwargs.pop('layers', 1)
+
+        def passthrough_index_rows(X, Y, i):
+            np.ones(X.shape[0], dtype='bool')
+
+        def passthrough_index_cols(X, Y, i):
+            np.ones(X.shape[1], dtype='bool')
+
+        def passthrough_none(*args):
+            return
+
         self.func_index_rows = func_index_rows
         self.func_index_cols = func_index_cols
         if func_index_rows is None:
-            self.func_index_rows = lambda X, Y, i: np.ones(X.shape[0],
-                                                           dtype='bool')
+            self.func_index_rows = passthrough_index_rows
         if func_index_cols is None:
-            self.func_index_cols = lambda X, Y, i: np.ones(X.shape[1],
-                                                           dtype='bool')
+            self.func_index_cols = passthrough_index_cols
         if func_callback is None:
-            self.func_callback = lambda *args: None
+            self.func_callback = passthrough_none
+        self.layers = kwargs.pop('layers', 1)
         self.kwargs = kwargs
         self.models = {i: {} for i in range(self.layers)}
         self.logger = logging.getLogger(__name__)
