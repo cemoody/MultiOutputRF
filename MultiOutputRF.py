@@ -103,12 +103,7 @@ class MultiOutputRF(object):
                 idx_rows = self.func_index_rows(X, Y, target)
                 assert np.all(idx_rows.index == X.index)
                 idx_cols = self.func_index_cols(X, Y, target)
-<<<<<<< HEAD
-                assert np.all([c in Y.columns for c in idx_cols])
-||||||| merged common ancestors
-=======
                 assert np.all([c in X.columns for c in idx_cols])
->>>>>>> f3982d20b82740bbd9a5f7c7372e9ff1beb62bb7
                 # Truncate input array rows (remove bad examples for
                 # target) and cols (remove leaky signals for
                 # target)
@@ -173,17 +168,6 @@ class MultiOutputRF(object):
                 idx_cols = self.func_index_cols(X, X, target)
                 sX = X[idx_cols]
                 model = self.models[layer][target]
-<<<<<<< HEAD
-                if layer == self.layers - 1:
-                    key = '%s_%02i' % (target, layer)
-                else:
-                    key = target
-                sYp = model.predict(sX)
-                sYp = pd.DataFrame(sYp, index=sX.index, columns=[key])
-                signals_added[key] = sYp
-||||||| merged common ancestors
-                sY = model.predict(sX)
-=======
                 if layer == self.layers - 1:
                     key = target
                 else:
@@ -191,22 +175,13 @@ class MultiOutputRF(object):
                 sYp = model.predict(sX)
                 sYp = pd.DataFrame(sYp, index=sX.index, columns=[key])
                 signals_added[key] = sYp
->>>>>>> f3982d20b82740bbd9a5f7c7372e9ff1beb62bb7
                 # Predict values for all examples
                 t1 = time.time()
                 msg = 'Layer %02i, col %s, prediction time %1.1isec'
                 msg = msg % (layer, target, t1 - t0)
                 self.logger.info(msg)
-<<<<<<< HEAD
-        ret = pd.DataFrame(signals_added)
-        assert np.all(ret.index == X.index)
-        return ret
-||||||| merged common ancestors
-        return np.vstack([signals_added]).T
-=======
         ret = signals_added.pop(key)
         for key, df in signals_added.iteritems():
             ret[key] = df
         assert np.all(ret.index == X.index)
         return ret
->>>>>>> f3982d20b82740bbd9a5f7c7372e9ff1beb62bb7
