@@ -7,6 +7,12 @@ The standard sklearn RFs allow for regressing multiple outputs at a time in a si
 
 Additionally, this class has callbacks that allow you to remove irrelevant rows and columns. You might like to remove rows that are good example observations for one target variable, but are bad, missing, or irrelevant for another target variable. You might like to remove columns dynamically for certain features: for a leaky signal for target A could be a great correlated signal for target B.
 
+Install
+=======
+Install by simply using pip:
+
+    pip install -e git+https://github.com/cemoody/MultiOutputRF.git#egg=MultiOutputRF --upgrade
+
 Example
 =======
 
