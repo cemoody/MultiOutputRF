@@ -1,8 +1,0 @@
-MultiOutputRF
-=============
-
-This class (thinly) extends Scikit-Learn Random Forests for Vectors
-
-The standard sklearn RFs allow for regressing multiple outputs at a time in a simplistic way. When splitting a scalar at the leaf level, the RFs try to maximize the resulting impurity. When you've got to split on a vector, this gets trickier and the sklearn implementation just takes the average impurity over all classes. This is likely not as performant as building a separate model for each dimension in the output -- which is what this module helps you do.
-
-Additionally, this class has callbacks that allow you to remove irrelevant rows and columns. You might like to remove rows that are good example observations for one target variable, but are bad, missing, or irrelevant for another target variable. You might like to remove columns dynamically for certain features: for a leaky signal for target A could be a great correlated signal for target B.
