@@ -5,6 +5,15 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
+def passthrough_index_rows(X, Y, i):
+    np.ones(X.shape[0], dtype='bool')
+
+def passthrough_index_cols(X, Y, i):
+    np.ones(X.shape[1], dtype='bool')
+
+def passthrough_none(*args):
+    return
+
 
 class MultiOutputRF(object):
     """ Thin wrapper class around the sklearn RF Regressor. Basically allows
@@ -55,15 +64,6 @@ class MultiOutputRF(object):
 
         """
 
-        def passthrough_index_rows(X, Y, i):
-            np.ones(X.shape[0], dtype='bool')
-
-        def passthrough_index_cols(X, Y, i):
-            np.ones(X.shape[1], dtype='bool')
-
-        def passthrough_none(*args):
-            return
-
         self.func_index_rows = func_index_rows
         self.func_index_cols = func_index_cols
         if func_index_rows is None:
@@ -96,7 +96,7 @@ class MultiOutputRF(object):
         for layer in range(self.layers):
             signals_added = {}
             if len(signals_added) > 0:
-                for k, v in signals_added.iteritems():
+                for k, v in signals_added.items():
                     X[k] = v
             for target in targets:
                 t0 = time.time()
@@ -161,7 +161,7 @@ class MultiOutputRF(object):
         for layer in range(self.layers):
             signals_added = {}
             if len(signals_added) > 0:
-                for k, v in signals_added.iteritems():
+                for k, v in signals_added.items():
                     X[k] = v
             for target in targets:
                 t0 = time.time()
@@ -181,7 +181,7 @@ class MultiOutputRF(object):
                 msg = msg % (layer, target, t1 - t0)
                 self.logger.info(msg)
         ret = signals_added.pop(key)
-        for key, df in signals_added.iteritems():
+        for key, df in signals_added.items():
             ret[key] = df
         assert np.all(ret.index == X.index)
         return ret
