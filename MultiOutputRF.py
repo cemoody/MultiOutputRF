@@ -99,6 +99,7 @@ class MultiOutputRF(object):
                 for k, v in signals_added.items():
                     X[k] = v
             for target in targets:
+                self.logger.info("Training %s" % target)
                 t0 = time.time()
                 idx_rows = self.func_index_rows(X, Y, target)
                 assert np.all(idx_rows.index == X.index)
